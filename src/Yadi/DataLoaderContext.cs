@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: InternalsVisibleTo("Yadi.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
+
 namespace Yadi
 {
-    public class DataLoaderContext
+    public sealed class DataLoaderContext : IDataLoaderContext
     {
         private Queue<IExecutableDataLoader> _executableDataLoaders = new Queue<IExecutableDataLoader>();
 
-        internal void QueueExecutableDataLoader(IExecutableDataLoader dataLoader)
+        void IDataLoaderContext.QueueExecutableDataLoader(IExecutableDataLoader dataLoader)
             => _executableDataLoaders.Enqueue(dataLoader);
 
         public async Task Complete(CancellationToken token)

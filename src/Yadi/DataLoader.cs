@@ -9,13 +9,18 @@ namespace Yadi
 {
     public abstract class DataLoader<TKey, TReturn> : IDataLoader<TKey, TReturn>, IExecutableDataLoader
     {
-        private readonly DataLoaderContext _context;
+        private readonly IDataLoaderContext _context;
         private ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>> _batch = new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>();
         private readonly object _syncRoot = new object();
 
-        protected DataLoader(DataLoaderContext context)
+        internal DataLoader(IDataLoaderContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        protected DataLoader(DataLoaderContext context)
+            : this((IDataLoaderContext)context)
+        {
         }
 
         public Task<TReturn> LoadAsync(TKey key)
