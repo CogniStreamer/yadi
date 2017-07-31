@@ -12,13 +12,27 @@ namespace Yadi.Tests
     public class KeyedDataLoaderTests
     {
         private Mock<IDataLoaderContext> _contextMock;
-        private BookLoader _loader;
+        private List<Tuple<Guid[], CancellationToken>> _fetchCalls;
+        private KeyedDataLoader<Guid, Book> _loader;
 
         [SetUp]
         public void SetUp()
         {
             _contextMock = new Mock<IDataLoaderContext>();
-            _loader = new BookLoader(_contextMock.Object);
+            _fetchCalls = new List<Tuple<Guid[], CancellationToken>>();
+            _loader = new KeyedDataLoader<Guid, Book>(
+                _contextMock.Object,
+                (keys, token) =>
+                {
+                    _fetchCalls.Add(new Tuple<Guid[], CancellationToken>(keys.ToArray(), token));
+
+                    return Task.FromResult<IReadOnlyDictionary<Guid, Book>>(keys.Select(id => new Book
+                    {
+                        Id = id,
+                        Title = $"SomeTitle",
+                        Author = $"SomeAuthor"
+                    }).ToDictionary(x => x.Id));
+                });
         }
 
         [Test]
@@ -40,7 +54,7 @@ namespace Yadi.Tests
         public async Task ExecuteAsync_NothingToLoad_ShouldNotCallFetchMethod()
         {
             await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
-            Assert.That(_loader.FetchCalls, Is.Empty);
+            Assert.That(_fetchCalls, Is.Empty);
         }
 
         [Test]
@@ -58,10 +72,10 @@ namespace Yadi.Tests
             Assert.That(loadTask.Result.Title, Is.EqualTo("SomeTitle"));
             Assert.That(loadTask.Result.Author, Is.EqualTo("SomeAuthor"));
 
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1[0], Is.EqualTo(bookId));
-            Assert.That(_loader.FetchCalls[0].Item2, Is.EqualTo(token));
+            Assert.That(_fetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0].Item1.Length, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0].Item1[0], Is.EqualTo(bookId));
+            Assert.That(_fetchCalls[0].Item2, Is.EqualTo(token));
         }
 
         [Test]
@@ -78,8 +92,8 @@ namespace Yadi.Tests
                 Assert.That(loadTasks[i].Result.Id, Is.EqualTo(bookIds[i]));
             }
 
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(bookIds.Length));
+            Assert.That(_fetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0].Item1.Length, Is.EqualTo(bookIds.Length));
         }
 
         [Test]
@@ -94,28 +108,9 @@ namespace Yadi.Tests
             Assert.That(task1.IsCompleted, Is.True);
             Assert.That(task2.IsCompleted, Is.True);
 
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1[0], Is.EqualTo(bookId));
-        }
-
-        private class BookLoader : KeyedDataLoader<Guid, Book>
-        {
-            internal BookLoader(IDataLoaderContext context) : base(context) { }
-
-            public List<Tuple<Guid[], CancellationToken>> FetchCalls { get; private set; } = new List<Tuple<Guid[], CancellationToken>>();
-
-            protected override Task<IReadOnlyDictionary<Guid, Book>> Fetch(IEnumerable<Guid> keys, CancellationToken token)
-            {
-                FetchCalls.Add(new Tuple<Guid[], CancellationToken>(keys.ToArray(), token));
-
-                return Task.FromResult<IReadOnlyDictionary<Guid, Book>>(keys.Select(id => new Book
-                {
-                    Id = id,
-                    Title = $"SomeTitle",
-                    Author = $"SomeAuthor"
-                }).ToDictionary(x => x.Id));
-            }
+            Assert.That(_fetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0].Item1.Length, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0].Item1[0], Is.EqualTo(bookId));
         }
 
         private class Book

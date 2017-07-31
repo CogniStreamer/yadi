@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Castle.Components.DictionaryAdapter;
 using Moq;
 using NUnit.Framework;
 
@@ -12,13 +13,36 @@ namespace Yadi.Tests
     public class DataLoaderTests
     {
         private Mock<IDataLoaderContext> _contextMock;
-        private BooksLoader _loader;
+        private List<CancellationToken> _fetchCalls;
+        private DataLoader<Book[]> _loader;
 
         [SetUp]
         public void SetUp()
         {
             _contextMock = new Mock<IDataLoaderContext>();
-            _loader = new BooksLoader(_contextMock.Object);
+            _fetchCalls = new EditableList<CancellationToken>();
+            _loader = new DataLoader<Book[]>(
+                _contextMock.Object,
+                token =>
+                {
+                    _fetchCalls.Add(token);
+
+                    return Task.FromResult(new[]
+                    {
+                        new Book
+                        {
+                            Id = Guid.NewGuid(),
+                            Title = "Title 1",
+                            Author = "Author 1"
+                        },
+                        new Book
+                        {
+                            Id = Guid.NewGuid(),
+                            Title = "Title 2",
+                            Author = "Author 2"
+                        }
+                    });
+                });
         }
 
         [Test]
@@ -39,7 +63,7 @@ namespace Yadi.Tests
         public async Task ExecuteAsync_NothingToLoad_ShouldNotCallFetchMethod()
         {
             await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
-            Assert.That(_loader.FetchCalls, Is.Empty);
+            Assert.That(_fetchCalls, Is.Empty);
         }
 
         [Test]
@@ -53,8 +77,8 @@ namespace Yadi.Tests
             Assert.That(loadTask.IsCompleted, Is.True);
 
             Assert.That(loadTask.Result.Length, Is.EqualTo(2));
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0], Is.EqualTo(token));
+            Assert.That(_fetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0], Is.EqualTo(token));
         }
 
         [Test]
@@ -65,41 +89,13 @@ namespace Yadi.Tests
 
             await await (_loader as IExecutableDataLoader).ExecuteAsync(token);
 
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0], Is.EqualTo(token));
+            Assert.That(_fetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_fetchCalls[0], Is.EqualTo(token));
 
             foreach (var task in loadTasks)
             {
                 Assert.That(task.IsCompleted, Is.True);
                 Assert.That(task.Result.Length, Is.EqualTo(2));
-            }
-        }
-
-        public class BooksLoader : DataLoader<Book[]>
-        {
-            internal BooksLoader(IDataLoaderContext context) : base(context) { }
-
-            public List<CancellationToken> FetchCalls { get; private set; } = new List<CancellationToken>();
-
-            protected override Task<Book[]> Fetch(CancellationToken token)
-            {
-                FetchCalls.Add(token);
-
-                return Task.FromResult(new []
-                {
-                    new Book
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = "Title 1",
-                        Author = "Author 1"
-                    },
-                    new Book
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = "Title 2",
-                        Author = "Author 2"
-                    }
-                });
             }
         }
 

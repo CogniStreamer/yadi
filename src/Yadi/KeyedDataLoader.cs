@@ -7,32 +7,27 @@ using System.Threading.Tasks;
 
 namespace Yadi
 {
-    public abstract class KeyedDataLoader<TKey, TReturn> : IKeyedDataLoader<TKey, TReturn>, IExecutableDataLoader
+    internal class KeyedDataLoader<TKey, TReturn> : IKeyedDataLoader<TKey, TReturn>, IExecutableDataLoader
     {
         private readonly IDataLoaderContext _context;
+        private readonly Func<IEnumerable<TKey>, CancellationToken, Task<IReadOnlyDictionary<TKey, TReturn>>> _fetch;
         private ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>> _batch = new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>();
         private readonly object _syncRoot = new object();
 
-        internal KeyedDataLoader(IDataLoaderContext context)
+        public KeyedDataLoader(IDataLoaderContext context, Func<IEnumerable<TKey>, CancellationToken, Task<IReadOnlyDictionary<TKey, TReturn>>> fetch)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-        }
-
-        protected KeyedDataLoader(DataLoaderContext context)
-            : this((IDataLoaderContext)context)
-        {
+            _context = context;
+            _fetch = fetch;
         }
 
         public Task<TReturn> LoadAsync(TKey key)
         {
             lock (_syncRoot)
             {
-                if (!Enumerable.Any(_batch)) _context.QueueExecutableDataLoader(this);
+                if (!_batch.Any()) _context.QueueExecutableDataLoader(this);
                 return _batch.GetOrAdd(key, _ => new TaskCompletionSource<TReturn>()).Task;
             }
         }
-
-        protected abstract Task<IReadOnlyDictionary<TKey, TReturn>> Fetch(IEnumerable<TKey> keys, CancellationToken token);
 
         async Task<Task> IExecutableDataLoader.ExecuteAsync(CancellationToken token)
         {
@@ -43,7 +38,7 @@ namespace Yadi
                 _batch = new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>();
             }
             if (!thisBatch.Any()) return Task.FromResult(0);
-            var data = await Fetch(thisBatch.Keys, token).ConfigureAwait(false);
+            var data = await _fetch(thisBatch.Keys, token).ConfigureAwait(false);
             return Task.Run(() => { foreach (var kvp in thisBatch) kvp.Value.SetResult(data[kvp.Key]); }, token);
         }
     }
