@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -18,8 +19,17 @@ namespace Yadi
 
         public async Task Complete(CancellationToken token)
         {
-            var thisQueue = Interlocked.Exchange(ref _executableDataLoaders, new Queue<IExecutableDataLoader>());
-            while (thisQueue.Any()) await thisQueue.Dequeue().ExecuteAsync(token).ConfigureAwait(false);
+            var tasks = new List<Task>();
+            while (tasks.Any() || _executableDataLoaders.Any())
+            {
+                if (_executableDataLoaders.Any())
+                {
+                    var queue = Interlocked.Exchange(ref _executableDataLoaders, new Queue<IExecutableDataLoader>());
+                    while (queue.Any()) tasks.Add(await queue.Dequeue().ExecuteAsync(token).ConfigureAwait(false));
+                }
+
+                tasks.Remove(await Task.WhenAny(tasks).ConfigureAwait(false));
+            }
         }
     }
 }

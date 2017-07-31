@@ -34,13 +34,13 @@ namespace Yadi
 
         protected abstract Task<IReadOnlyDictionary<TKey, TReturn>> Fetch(IEnumerable<TKey> keys, CancellationToken token);
 
-        async Task IExecutableDataLoader.ExecuteAsync(CancellationToken token)
+        async Task<Task> IExecutableDataLoader.ExecuteAsync(CancellationToken token)
         {
             ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>> thisBatch;
             lock (_syncRoot) thisBatch = Interlocked.Exchange(ref _batch, new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>());
-            if (!thisBatch.Any()) return;
+            if (!thisBatch.Any()) return Task.FromResult(0);
             var data = await Fetch(thisBatch.Keys, token).ConfigureAwait(false);
-            foreach (var kvp in thisBatch) kvp.Value.SetResult(data[kvp.Key]);
+            return Task.Run(() => { foreach (var kvp in thisBatch) kvp.Value.SetResult(data[kvp.Key]); }, token);
         }
     }
 }

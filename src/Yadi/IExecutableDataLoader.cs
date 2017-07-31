@@ -5,6 +5,6 @@ namespace Yadi
 {
     internal interface IExecutableDataLoader
     {
-        Task ExecuteAsync(CancellationToken token);
+        Task<Task> ExecuteAsync(CancellationToken token);
     }
 }

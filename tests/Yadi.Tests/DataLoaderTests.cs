@@ -39,7 +39,7 @@ namespace Yadi.Tests
         [Test]
         public async Task ExecuteAsync_NothingToLoad_ShouldNotCallFetchMethod()
         {
-            await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
             Assert.That(_loader.FetchCalls, Is.Empty);
         }
 
@@ -51,7 +51,7 @@ namespace Yadi.Tests
             var loadTask = _loader.LoadAsync(bookId);
             Assert.That(loadTask.IsCompleted, Is.False);
 
-            await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
             Assert.That(loadTask.IsCompleted, Is.True);
 
             Assert.That(loadTask.Result.Id, Is.EqualTo(bookId));
@@ -70,7 +70,7 @@ namespace Yadi.Tests
             var bookIds = Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray();
             var loadTasks = bookIds.Select(bookId => _loader.LoadAsync(bookId)).ToArray();
 
-            await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
 
             for (var i = 0; i < loadTasks.Length; i++)
             {
@@ -89,7 +89,7 @@ namespace Yadi.Tests
             var task1 = _loader.LoadAsync(bookId);
             var task2 = _loader.LoadAsync(bookId);
 
-            await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
 
             Assert.That(task1.IsCompleted, Is.True);
             Assert.That(task2.IsCompleted, Is.True);
