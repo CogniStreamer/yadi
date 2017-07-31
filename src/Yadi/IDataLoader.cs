@@ -2,8 +2,8 @@
 
 namespace Yadi
 {
-    public interface IDataLoader<in TKey, TReturn>
+    public interface IDataLoader<TReturn>
     {
-        Task<TReturn> LoadAsync(TKey key);
+        Task<TReturn> LoadAsync();
     }
 }

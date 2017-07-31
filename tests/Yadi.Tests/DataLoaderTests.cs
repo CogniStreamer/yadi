@@ -12,13 +12,13 @@ namespace Yadi.Tests
     public class DataLoaderTests
     {
         private Mock<IDataLoaderContext> _contextMock;
-        private BookLoader _loader;
+        private BooksLoader _loader;
 
         [SetUp]
         public void SetUp()
         {
             _contextMock = new Mock<IDataLoaderContext>();
-            _loader = new BookLoader(_contextMock.Object);
+            _loader = new BooksLoader(_contextMock.Object);
         }
 
         [Test]
@@ -31,8 +31,7 @@ namespace Yadi.Tests
         [Test]
         public void LoadAsync_ShouldQueueLoaderAndCompleteTask()
         {
-            var bookId = Guid.NewGuid();
-            _loader.LoadAsync(bookId);
+            _loader.LoadAsync();
             _contextMock.Verify(x => x.QueueExecutableDataLoader(_loader), Times.Once);
         }
 
@@ -46,75 +45,61 @@ namespace Yadi.Tests
         [Test]
         public async Task ExecuteAsync_LoadAsyncCalled_ShouldResolveLoadAsyncTask()
         {
-            var token = new CancellationToken();
-            var bookId = Guid.NewGuid();
-            var loadTask = _loader.LoadAsync(bookId);
+            var token = new CancellationTokenSource().Token;
+            var loadTask = _loader.LoadAsync();
             Assert.That(loadTask.IsCompleted, Is.False);
 
-            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(token);
             Assert.That(loadTask.IsCompleted, Is.True);
 
-            Assert.That(loadTask.Result.Id, Is.EqualTo(bookId));
-            Assert.That(loadTask.Result.Title, Is.EqualTo("SomeTitle"));
-            Assert.That(loadTask.Result.Author, Is.EqualTo("SomeAuthor"));
-
+            Assert.That(loadTask.Result.Length, Is.EqualTo(2));
             Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1[0], Is.EqualTo(bookId));
-            Assert.That(_loader.FetchCalls[0].Item2, Is.EqualTo(token));
+            Assert.That(_loader.FetchCalls[0], Is.EqualTo(token));
         }
 
         [Test]
-        public async Task ExecuteAsync_LoadAsyncCalledMultipleTimes_ShouldResolveAllLoadAsyncTasks()
+        public async Task ExecuteAsync_LoadAsyncCalledMultipleTimes_ShouldOnlyFetchOnceAndResolveAllLoadAsyncTasks()
         {
-            var bookIds = Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray();
-            var loadTasks = bookIds.Select(bookId => _loader.LoadAsync(bookId)).ToArray();
+            var token = new CancellationTokenSource().Token;
+            var loadTasks = Enumerable.Range(0, 20).Select(_ => _loader.LoadAsync()).ToArray();
 
-            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            await await (_loader as IExecutableDataLoader).ExecuteAsync(token);
 
-            for (var i = 0; i < loadTasks.Length; i++)
+            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
+            Assert.That(_loader.FetchCalls[0], Is.EqualTo(token));
+
+            foreach (var task in loadTasks)
             {
-                Assert.That(loadTasks[i].IsCompleted, Is.True);
-                Assert.That(loadTasks[i].Result.Id, Is.EqualTo(bookIds[i]));
+                Assert.That(task.IsCompleted, Is.True);
+                Assert.That(task.Result.Length, Is.EqualTo(2));
             }
-
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(bookIds.Length));
         }
 
-        [Test]
-        public async Task ExecuteAsync_LoadAsyncTwiceForSameId_ShouldOnlyFetchSingleIdButResolveBothLoadAsyncTasks()
+        public class BooksLoader : DataLoader<Book[]>
         {
-            var bookId = Guid.NewGuid();
-            var task1 = _loader.LoadAsync(bookId);
-            var task2 = _loader.LoadAsync(bookId);
+            internal BooksLoader(IDataLoaderContext context) : base(context) { }
 
-            await await (_loader as IExecutableDataLoader).ExecuteAsync(CancellationToken.None);
+            public List<CancellationToken> FetchCalls { get; private set; } = new List<CancellationToken>();
 
-            Assert.That(task1.IsCompleted, Is.True);
-            Assert.That(task2.IsCompleted, Is.True);
-
-            Assert.That(_loader.FetchCalls.Count, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1.Length, Is.EqualTo(1));
-            Assert.That(_loader.FetchCalls[0].Item1[0], Is.EqualTo(bookId));
-        }
-
-        public class BookLoader : DataLoader<Guid, Book>
-        {
-            internal BookLoader(IDataLoaderContext context) : base(context) { }
-
-            public List<Tuple<Guid[], CancellationToken>> FetchCalls { get; private set; } = new List<Tuple<Guid[], CancellationToken>>();
-
-            protected override Task<IReadOnlyDictionary<Guid, Book>> Fetch(IEnumerable<Guid> keys, CancellationToken token)
+            protected override Task<Book[]> Fetch(CancellationToken token)
             {
-                FetchCalls.Add(new Tuple<Guid[], CancellationToken>(keys.ToArray(), token));
+                FetchCalls.Add(token);
 
-                return Task.FromResult<IReadOnlyDictionary<Guid, Book>>(keys.Select(id => new Book
+                return Task.FromResult(new []
                 {
-                    Id = id,
-                    Title = $"SomeTitle",
-                    Author = $"SomeAuthor"
-                }).ToDictionary(x => x.Id));
+                    new Book
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = "Title 1",
+                        Author = "Author 1"
+                    },
+                    new Book
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = "Title 2",
+                        Author = "Author 2"
+                    }
+                });
             }
         }
 

@@ -19,7 +19,7 @@ namespace Yadi.Tests
         [Test]
         public async Task Complete_WithOneDataLoader_ShouldCallExecuteAsyncMethod()
         {
-            var token = new CancellationToken();
+            var token = new CancellationTokenSource().Token;
             var context = new DataLoaderContext();
             var dataLoaderMock = new Mock<IExecutableDataLoader>();
             (context as IDataLoaderContext).QueueExecutableDataLoader(dataLoaderMock.Object);
@@ -31,7 +31,7 @@ namespace Yadi.Tests
         [Test]
         public async Task Complete_WithMultipleDataLoaders_ShouldCallAllExecuteAsyncMethods()
         {
-            var token = new CancellationToken();
+            var token = new CancellationTokenSource().Token;
             var context = new DataLoaderContext();
             var dataLoaderMocks = Enumerable.Range(0, 20).Select(_ => new Mock<IExecutableDataLoader>()).ToList();
             dataLoaderMocks.ForEach(mock => (context as IDataLoaderContext).QueueExecutableDataLoader(mock.Object));
@@ -43,7 +43,7 @@ namespace Yadi.Tests
         [Test]
         public async Task Complete_WithMultipleDataLoaders_ShouldClearQueue()
         {
-            var token = new CancellationToken();
+            var token = new CancellationTokenSource().Token;
             var context = new DataLoaderContext();
             var dataLoaderMocks = Enumerable.Range(0, 20).Select(_ => new Mock<IExecutableDataLoader>()).ToList();
             dataLoaderMocks.ForEach(mock => (context as IDataLoaderContext).QueueExecutableDataLoader(mock.Object));

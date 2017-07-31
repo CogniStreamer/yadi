@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Yadi
 {
-    public abstract class DataLoader<TKey, TReturn> : IDataLoader<TKey, TReturn>, IExecutableDataLoader
+    public abstract class DataLoader<TReturn> : IDataLoader<TReturn>, IExecutableDataLoader
     {
         private readonly IDataLoaderContext _context;
-        private ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>> _batch = new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>();
+        private TaskCompletionSource<TReturn> _query = null;
         private readonly object _syncRoot = new object();
 
         internal DataLoader(IDataLoaderContext context)
@@ -23,24 +20,32 @@ namespace Yadi
         {
         }
 
-        public Task<TReturn> LoadAsync(TKey key)
+        public Task<TReturn> LoadAsync()
         {
             lock (_syncRoot)
             {
-                if (!_batch.Any()) _context.QueueExecutableDataLoader(this);
-                return _batch.GetOrAdd(key, _ => new TaskCompletionSource<TReturn>()).Task;
+                if (_query == null)
+                {
+                    _context.QueueExecutableDataLoader(this);
+                    _query = new TaskCompletionSource<TReturn>();
+                }
+                return _query.Task;
             }
         }
 
-        protected abstract Task<IReadOnlyDictionary<TKey, TReturn>> Fetch(IEnumerable<TKey> keys, CancellationToken token);
+        protected abstract Task<TReturn> Fetch(CancellationToken token);
 
         async Task<Task> IExecutableDataLoader.ExecuteAsync(CancellationToken token)
         {
-            ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>> thisBatch;
-            lock (_syncRoot) thisBatch = Interlocked.Exchange(ref _batch, new ConcurrentDictionary<TKey, TaskCompletionSource<TReturn>>());
-            if (!thisBatch.Any()) return Task.FromResult(0);
-            var data = await Fetch(thisBatch.Keys, token).ConfigureAwait(false);
-            return Task.Run(() => { foreach (var kvp in thisBatch) kvp.Value.SetResult(data[kvp.Key]); }, token);
+            TaskCompletionSource<TReturn> thisQuery;
+            lock (_syncRoot)
+            {
+                thisQuery = _query;
+                _query = null;
+            }
+            if (thisQuery == null) return Task.FromResult(0);
+            var data = await Fetch(token).ConfigureAwait(false);
+            return Task.Run(() => thisQuery.SetResult(data), token);
         }
     }
 }
