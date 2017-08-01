@@ -39,7 +39,15 @@ namespace Yadi
             }
             if (!thisBatch.Any()) return Task.FromResult(0);
             var data = await _fetch(thisBatch.Keys, token).ConfigureAwait(false);
-            return Task.Run(() => { foreach (var kvp in thisBatch) kvp.Value.SetResult(data[kvp.Key]); }, token);
+            return Task.Run(() =>
+            {
+                foreach (var kvp in thisBatch)
+                {
+                    var value = default(TReturn);
+                    data?.TryGetValue(kvp.Key, out value);
+                    kvp.Value.SetResult(value);
+                }
+            }, token);
         }
     }
 }

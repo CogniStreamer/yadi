@@ -113,6 +113,48 @@ namespace Yadi.Tests
             Assert.That(_fetchCalls[0].Item1[0], Is.EqualTo(bookId));
         }
 
+        [Test]
+        public async Task ExecuteAsync_FetchReturnsNullDictionary_ShouldResolveLoadAsyncWithDefaultValue()
+        {
+            var loader = new KeyedDataLoader<Guid, Book>(_contextMock.Object,
+                (keys, token) => Task.FromResult<IReadOnlyDictionary<Guid, Book>>(null));
+
+            var task = loader.LoadAsync(Guid.NewGuid());
+
+            await await ((IExecutableDataLoader)loader).ExecuteAsync(CancellationToken.None);
+
+            Assert.That(task.IsCompleted, Is.True);
+            Assert.That(task.Result, Is.EqualTo(null));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_FetchReturnsEmptyDictionary_ShouldResolveLoadAsyncWithDefaultValue()
+        {
+            var loader = new KeyedDataLoader<Guid, Book>(_contextMock.Object,
+                (keys, token) => Task.FromResult<IReadOnlyDictionary<Guid, Book>>(new Dictionary<Guid, Book>()));
+
+            var task = loader.LoadAsync(Guid.NewGuid());
+
+            await await ((IExecutableDataLoader)loader).ExecuteAsync(CancellationToken.None);
+
+            Assert.That(task.IsCompleted, Is.True);
+            Assert.That(task.Result, Is.EqualTo(null));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_ElementIsMissingFromFetchDictionary_ShouldResolveLoadAsyncWithDefaultValue()
+        {
+            var loader = new KeyedDataLoader<Guid, Book>(_contextMock.Object,
+                (keys, token) => Task.FromResult<IReadOnlyDictionary<Guid, Book>>(new Dictionary<Guid, Book>()));
+
+            var task = loader.LoadAsync(Guid.NewGuid());
+
+            await await ((IExecutableDataLoader)loader).ExecuteAsync(CancellationToken.None);
+
+            Assert.That(task.IsCompleted, Is.True);
+            Assert.That(task.Result, Is.EqualTo(null));
+        }
+
         private class Book
         {
             public Guid Id { get; set; }
