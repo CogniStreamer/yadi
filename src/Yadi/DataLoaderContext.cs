@@ -22,7 +22,7 @@ namespace Yadi
         public IDataLoader<TReturn> GetOrCreateLoader<TReturn>(Func<CancellationToken, Task<TReturn>> fetch)
             => (IDataLoader<TReturn>) _cache.GetOrAdd(fetch, _ => new DataLoader<TReturn>(this, fetch));
 
-        public IKeyedDataLoader<TKey, TReturn> GetOrCreateKeyedLoader<TKey, TReturn>(Func<IEnumerable<TKey>, CancellationToken, Task<IReadOnlyDictionary<TKey, TReturn>>> fetch)
+        public IKeyedDataLoader<TKey, TReturn> GetOrCreateLoader<TKey, TReturn>(Func<IEnumerable<TKey>, CancellationToken, Task<IReadOnlyDictionary<TKey, TReturn>>> fetch)
             => (IKeyedDataLoader<TKey, TReturn>) _cache.GetOrAdd(fetch, _ => new KeyedDataLoader<TKey, TReturn>(this, fetch));
         
         public async Task Complete(CancellationToken token)
