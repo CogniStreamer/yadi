@@ -14,7 +14,6 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/huysentruitw/yadi</RepositoryUrl>
     <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard2.0' ">$(PackageTargetFallback);dnxcore50;portable-net47+win10</PackageTargetFallback>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard2.0' ">2.0.0</NetStandardImplicitPackageVersion>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
