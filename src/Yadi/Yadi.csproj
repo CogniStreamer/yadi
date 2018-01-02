@@ -5,7 +5,7 @@
     <Authors>Wouter Huysentruit</Authors>
     <Company>Huysentruit</Company>
     <Product>Yadi</Product>
-    <Copyright>Copyright © 2017 Wouter Huysentruit</Copyright>
+    <Copyright>Copyright © 2018 Wouter Huysentruit</Copyright>
     <AssemblyName>Yadi</AssemblyName>
     <PackageId>Yadi</PackageId>
     <PackageVersion>1.0.0</PackageVersion>
@@ -13,9 +13,9 @@
     <PackageLicenseUrl>https://raw.githubusercontent.com/huysentruitw/yadi/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/huysentruitw/yadi</RepositoryUrl>
-    <TargetFrameworks>net452;netstandard1.5</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50;portable-net45+win8</PackageTargetFallback>
-    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.5' ">1.6.0</NetStandardImplicitPackageVersion>
+    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard2.0' ">$(PackageTargetFallback);dnxcore50;portable-net47+win10</PackageTargetFallback>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard2.0' ">2.0.0</NetStandardImplicitPackageVersion>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
@@ -33,8 +33,4 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
-  </ItemGroup>
 </Project>
